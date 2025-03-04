@@ -120,64 +120,64 @@ static JsValueParseStatus js_value_parse_va(
     mjs_val_t* buffer,
     size_t* buffer_index,
     va_list* out_pointers) {
+    // fetch out pointer
+    void* destination = NULL;
+    if(declaration->type != JsValueTypeEnum && declaration->type != JsValueTypeObject)
+        declaration = va_arg(*out_pointers, void*);
+
     switch(declaration->type) {
     // Literal terms
     case JsValueTypeAny: {
-        *va_arg(*out_pointers, mjs_val_t*) = *source;
+        *(mjs_val_t*)destination = *source;
         break;
     }
     case JsValueTypeAnyArray: {
         if(!mjs_is_array(*source)) PREPEND_JS_ERROR_AND_RETURN(mjs, flags, "expected array");
-        *va_arg(*out_pointers, mjs_val_t*) = *source;
+        *(mjs_val_t*)destination = *source;
         break;
     }
     case JsValueTypeAnyObject: {
         if(!mjs_is_object(*source)) PREPEND_JS_ERROR_AND_RETURN(mjs, flags, "expected object");
-        *va_arg(*out_pointers, mjs_val_t*) = *source;
+        *(mjs_val_t*)destination = *source;
         break;
     }
     case JsValueTypeFunction: {
         if(!mjs_is_function(*source)) PREPEND_JS_ERROR_AND_RETURN(mjs, flags, "expected function");
-        *va_arg(*out_pointers, mjs_val_t*) = *source;
+        *(mjs_val_t*)destination = *source;
         break;
     }
 
     // Primitive types
     case JsValueTypeRawPointer: {
-        void** destination = *va_arg(*out_pointers, void**);
         if(js_value_maybe_assign_default(declaration, source, destination, sizeof(void*))) break;
         if(!mjs_is_foreign(*source)) PREPEND_JS_ERROR_AND_RETURN(mjs, flags, "expected pointer");
-        *destination = mjs_get_ptr(mjs, *source);
+        *(void**)destination = mjs_get_ptr(mjs, *source);
         break;
     }
     case JsValueTypeInt32: {
-        int32_t* destination = va_arg(*out_pointers, int32_t*);
         if(js_value_maybe_assign_default(declaration, source, destination, sizeof(int32_t))) break;
         if(!mjs_is_number(*source)) PREPEND_JS_ERROR_AND_RETURN(mjs, flags, "expected number");
-        *destination = mjs_get_int32(mjs, *source);
+        *(int32_t*)destination = mjs_get_int32(mjs, *source);
         break;
     }
     case JsValueTypeDouble: {
-        double* destination = va_arg(*out_pointers, double*);
         if(js_value_maybe_assign_default(declaration, source, destination, sizeof(double))) break;
         if(!mjs_is_number(*source)) PREPEND_JS_ERROR_AND_RETURN(mjs, flags, "expected number");
-        *destination = mjs_get_double(mjs, *source);
+        *(double*)destination = mjs_get_double(mjs, *source);
         break;
     }
     case JsValueTypeBool: {
-        bool* destination = va_arg(*out_pointers, bool*);
         if(js_value_maybe_assign_default(declaration, source, destination, sizeof(bool))) break;
         if(!mjs_is_boolean(*source)) PREPEND_JS_ERROR_AND_RETURN(mjs, flags, "expected bool");
-        *destination = mjs_get_bool(mjs, *source);
+        *(bool*)destination = mjs_get_bool(mjs, *source);
         break;
     }
     case JsValueTypeString: {
-        const char** destination = va_arg(*out_pointers, const char**);
         if(js_value_maybe_assign_default(declaration, source, destination, sizeof(const char*)))
             break;
         if(!mjs_is_string(*source)) PREPEND_JS_ERROR_AND_RETURN(mjs, flags, "expected string");
         buffer[*buffer_index] = *source;
-        *destination = mjs_get_string(mjs, &buffer[*buffer_index], NULL);
+        *(const char**)destination = mjs_get_string(mjs, &buffer[*buffer_index], NULL);
         (*buffer_index)++;
         break;
     }
@@ -254,11 +254,14 @@ JsValueParseStatus js_value_parse(
     furi_check(declaration);
     furi_check(buffer);
 
-    // These are asserts and not checks because argument parsing has to be fast.
-    // People bitbang I2C from JS.
-    furi_assert(js_value_declaration_valid(declaration));
-    furi_assert(buf_size == js_value_buffer_size(declaration));
-    furi_assert(n_c_vals == js_value_resulting_c_values_count(declaration));
+#ifdef JS_VAL_DEBUG
+    furi_check(js_value_declaration_valid(declaration));
+    furi_check(buf_size == js_value_buffer_size(declaration));
+    furi_check(n_c_vals == js_value_resulting_c_values_count(declaration));
+#else
+    UNUSED(js_value_declaration_valid);
+    UNUSED(js_value_resulting_c_values_count);
+#endif
 
     va_list out_pointers;
     va_start(out_pointers, n_c_vals);
