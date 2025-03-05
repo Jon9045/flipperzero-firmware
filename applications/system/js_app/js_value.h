@@ -108,7 +108,7 @@ typedef struct {
 #define JS_VALUE_SIMPLE(t) {.type = t}
 
 #define JS_VALUE_SIMPLE_W_DEFAULT(t, name, val) \
-    {.type = t | JsValueTypePermitNull, .default_value.name = (val)}
+    {.type = (t) | JsValueTypePermitNull, .default_value.name = (val)}
 
 #define JS_VALUE_ARGS(args)           \
     {                                 \
