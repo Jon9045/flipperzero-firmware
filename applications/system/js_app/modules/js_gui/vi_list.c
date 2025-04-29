@@ -2,10 +2,10 @@
 #include "js_gui.h"
 #include "../js_event_loop/js_event_loop.h"
 #include <gui/modules/variable_item_list.h>
+#include <toolbox/str_buffer.h>
 
 typedef struct {
-    char** owned_strings;
-    size_t n_owned_strings;
+    StrBuffer str_buffer;
 
     // let mjs do the memory management heavy lifting, store children in a js array
     struct mjs* mjs;
@@ -20,24 +20,6 @@ typedef struct {
     int32_t item_index;
     int32_t value_index;
 } JsViListEvent;
-
-// not using mlib to conserve code size
-static const char* js_vi_list_own_string(JsViListContext* context, const char* str) {
-    char* owned = strdup(str);
-    context->n_owned_strings++;
-    context->owned_strings =
-        realloc(context->owned_strings, context->n_owned_strings * sizeof(const char*));
-    context->owned_strings[context->n_owned_strings - 1] = owned;
-    return owned;
-}
-
-static void js_vi_list_free_owned_strings(JsViListContext* context) {
-    for(size_t i = 0; i < context->n_owned_strings; i++) {
-        free(context->owned_strings[i]);
-    }
-    free(context->owned_strings);
-    context->owned_strings = NULL;
-}
 
 static mjs_val_t
     input_transformer(struct mjs* mjs, FuriMessageQueue* queue, JsViListContext* context) {
@@ -111,7 +93,7 @@ static bool js_vi_list_add_child(
 
     VariableItem* item = variable_item_list_add(
         list,
-        js_vi_list_own_string(context, label),
+        str_buffer_make_owned_clone(&context->str_buffer, label),
         variants_cnt,
         js_vi_list_change_callback,
         context);
@@ -130,12 +112,13 @@ static void js_vi_list_reset_children(VariableItemList* list, JsViListContext* c
     mjs_own(context->mjs, &context->children);
 
     variable_item_list_reset(list);
-    js_vi_list_free_owned_strings(context);
+    str_buffer_clear_all_clones(&context->str_buffer);
 }
 
 static JsViListContext* ctx_make(struct mjs* mjs, VariableItemList* list, mjs_val_t view_obj) {
     JsViListContext* context = malloc(sizeof(JsViListContext));
     *context = (JsViListContext){
+        .str_buffer = {0},
         .mjs = mjs,
         .children = mjs_mk_array(mjs),
         .list = list,
@@ -161,7 +144,7 @@ static void ctx_destroy(VariableItemList* input, JsViListContext* context, FuriE
     UNUSED(input);
     furi_event_loop_maybe_unsubscribe(loop, context->input_queue);
     furi_message_queue_free(context->input_queue);
-    js_vi_list_free_owned_strings(context);
+    str_buffer_clear_all_clones(&context->str_buffer);
     free(context);
 }
 

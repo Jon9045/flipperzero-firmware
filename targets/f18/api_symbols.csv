@@ -1,5 +1,5 @@
 entry,status,name,type,params
-Version,+,82.1,,
+Version,+,82.2,,
 Header,+,applications/services/bt/bt_service/bt.h,,
 Header,+,applications/services/bt/bt_service/bt_keys_storage.h,,
 Header,+,applications/services/cli/cli.h,,
@@ -168,6 +168,7 @@ Header,+,lib/toolbox/protocols/protocol_dict.h,,
 Header,+,lib/toolbox/pulse_protocols/pulse_glue.h,,
 Header,+,lib/toolbox/saved_struct.h,,
 Header,+,lib/toolbox/simple_array.h,,
+Header,+,lib/toolbox/str_buffer.h,,
 Header,+,lib/toolbox/stream/buffered_file_stream.h,,
 Header,+,lib/toolbox/stream/file_stream.h,,
 Header,+,lib/toolbox/stream/stream.h,,
@@ -2361,13 +2362,13 @@ Function,-,pow,double,"double, double"
 Function,-,pow10,double,double
 Function,-,pow10f,float,float
 Function,+,power_enable_low_battery_level_notification,void,"Power*, _Bool"
+Function,+,power_enable_otg,void,"Power*, _Bool"
 Function,+,power_get_info,void,"Power*, PowerInfo*"
 Function,+,power_get_pubsub,FuriPubSub*,Power*
 Function,+,power_is_battery_healthy,_Bool,Power*
 Function,+,power_is_otg_enabled,_Bool,Power*
 Function,+,power_off,void,Power*
 Function,+,power_reboot,void,"Power*, PowerBootMode"
-Function,+,power_enable_otg,void,"Power*, _Bool"
 Function,+,powf,float,"float, float"
 Function,-,powl,long double,"long double, long double"
 Function,+,pretty_format_bytes_hex_canonical,void,"FuriString*, size_t, const char*, const uint8_t*, size_t"
@@ -2611,6 +2612,8 @@ Function,+,storage_simply_remove,_Bool,"Storage*, const char*"
 Function,+,storage_simply_remove_recursive,_Bool,"Storage*, const char*"
 Function,-,stpcpy,char*,"char*, const char*"
 Function,-,stpncpy,char*,"char*, const char*, size_t"
+Function,+,str_buffer_clear_all_clones,void,StrBuffer*
+Function,+,str_buffer_make_owned_clone,const char*,"StrBuffer*, const char*"
 Function,+,strcasecmp,int,"const char*, const char*"
 Function,-,strcasecmp_l,int,"const char*, const char*, locale_t"
 Function,+,strcasestr,char*,"const char*, const char*"

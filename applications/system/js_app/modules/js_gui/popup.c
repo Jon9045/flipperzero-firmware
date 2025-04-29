@@ -2,32 +2,13 @@
 #include "js_gui.h"
 #include "../js_event_loop/js_event_loop.h"
 #include <gui/modules/popup.h>
+#include <toolbox/str_buffer.h>
 
 typedef struct {
-    char** owned_strings;
-    size_t n_owned_strings;
-
+    StrBuffer str_buffer;
     FuriSemaphore* semaphore;
     JsEventLoopContract contract;
 } JsPopupCtx;
-
-// not using mlib to conserve code size
-static const char* js_popup_own_string(JsPopupCtx* context, const char* str) {
-    char* owned = strdup(str);
-    context->n_owned_strings++;
-    context->owned_strings =
-        realloc(context->owned_strings, context->n_owned_strings * sizeof(const char*));
-    context->owned_strings[context->n_owned_strings - 1] = owned;
-    return owned;
-}
-
-static void js_popup_free_owned_strings(JsPopupCtx* context) {
-    for(size_t i = 0; i < context->n_owned_strings; i++) {
-        free(context->owned_strings[i]);
-    }
-    free(context->owned_strings);
-    context->owned_strings = NULL;
-}
 
 static void timeout_callback(JsPopupCtx* context) {
     furi_check(furi_semaphore_release(context->semaphore) == FuriStatusOk);
@@ -38,7 +19,12 @@ static bool
     UNUSED(mjs);
     UNUSED(context);
     popup_set_header(
-        popup, js_popup_own_string(context, value.string), 64, 0, AlignCenter, AlignTop);
+        popup,
+        str_buffer_make_owned_clone(&context->str_buffer, value.string),
+        64,
+        0,
+        AlignCenter,
+        AlignTop);
     return true;
 }
 
@@ -47,7 +33,12 @@ static bool
     UNUSED(mjs);
     UNUSED(context);
     popup_set_text(
-        popup, js_popup_own_string(context, value.string), 64, 32, AlignCenter, AlignCenter);
+        popup,
+        str_buffer_make_owned_clone(&context->str_buffer, value.string),
+        64,
+        32,
+        AlignCenter,
+        AlignCenter);
     return true;
 }
 
@@ -82,7 +73,7 @@ static void ctx_destroy(Popup* popup, JsPopupCtx* context, FuriEventLoop* loop) 
     UNUSED(popup);
     furi_event_loop_maybe_unsubscribe(loop, context->semaphore);
     furi_semaphore_free(context->semaphore);
-    js_popup_free_owned_strings(context);
+    str_buffer_clear_all_clones(&context->str_buffer);
     free(context);
 }
 

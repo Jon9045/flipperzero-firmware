@@ -2,33 +2,15 @@
 #include "js_gui.h"
 #include "../js_event_loop/js_event_loop.h"
 #include <gui/modules/menu.h>
+#include <toolbox/str_buffer.h>
 
 typedef struct {
     int32_t next_index;
-    char** owned_strings;
-    size_t n_owned_strings;
+    StrBuffer str_buffer;
 
     FuriMessageQueue* queue;
     JsEventLoopContract contract;
 } JsMenuCtx;
-
-// not using mlib to conserve code size
-static const char* js_menu_own_string(JsMenuCtx* context, const char* str) {
-    char* owned = strdup(str);
-    context->n_owned_strings++;
-    context->owned_strings =
-        realloc(context->owned_strings, context->n_owned_strings * sizeof(const char*));
-    context->owned_strings[context->n_owned_strings - 1] = owned;
-    return owned;
-}
-
-static void js_menu_free_owned_strings(JsMenuCtx* context) {
-    for(size_t i = 0; i < context->n_owned_strings; i++) {
-        free(context->owned_strings[i]);
-    }
-    free(context->owned_strings);
-    context->owned_strings = NULL;
-}
 
 static mjs_val_t choose_transformer(struct mjs* mjs, FuriMessageQueue* queue, void* context) {
     UNUSED(context);
@@ -68,7 +50,7 @@ static bool
 
     menu_add_item(
         menu,
-        js_menu_own_string(context, label),
+        str_buffer_make_owned_clone(&context->str_buffer, label),
         icon,
         context->next_index++,
         choose_callback,
@@ -80,7 +62,7 @@ static bool
 static void js_menu_reset_children(Menu* menu, JsMenuCtx* context) {
     context->next_index = 0;
     menu_reset(menu);
-    js_menu_free_owned_strings(context);
+    str_buffer_clear_all_clones(&context->str_buffer);
 }
 
 static JsMenuCtx* ctx_make(struct mjs* mjs, Menu* input, mjs_val_t view_obj) {
@@ -105,6 +87,7 @@ static void ctx_destroy(Menu* input, JsMenuCtx* context, FuriEventLoop* loop) {
     UNUSED(input);
     furi_event_loop_maybe_unsubscribe(loop, context->queue);
     furi_message_queue_free(context->queue);
+    str_buffer_clear_all_clones(&context->str_buffer);
     free(context);
 }
 

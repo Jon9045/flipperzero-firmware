@@ -2,12 +2,12 @@
 #include "js_gui.h"
 #include "../js_event_loop/js_event_loop.h"
 #include <gui/modules/button_panel.h>
+#include <toolbox/str_buffer.h>
 
 typedef struct {
     size_t matrix_x, matrix_y;
     int32_t next_index;
-    char** owned_strings;
-    size_t n_owned_strings;
+    StrBuffer str_buffer;
 
     FuriMessageQueue* input_queue;
     JsEventLoopContract contract;
@@ -17,24 +17,6 @@ typedef struct {
     int32_t index;
     InputType input_type;
 } JsBtnPanelEvent;
-
-// not using mlib to conserve code size
-static const char* js_button_panel_own_string(JsBtnPanelContext* context, const char* str) {
-    char* owned = strdup(str);
-    context->n_owned_strings++;
-    context->owned_strings =
-        realloc(context->owned_strings, context->n_owned_strings * sizeof(const char*));
-    context->owned_strings[context->n_owned_strings - 1] = owned;
-    return owned;
-}
-
-static void js_button_panel_free_owned(JsBtnPanelContext* context) {
-    for(size_t i = 0; i < context->n_owned_strings; i++) {
-        free(context->owned_strings[i]);
-    }
-    free(context->owned_strings);
-    context->owned_strings = NULL;
-}
 
 static const char* js_input_type_to_str(InputType type) {
     switch(type) {
@@ -206,7 +188,8 @@ static bool js_button_panel_add_child(
             &text,
             &font);
         if(status != JsValueParseStatusOk) return false;
-        button_panel_add_label(panel, x, y, font, js_button_panel_own_string(context, text));
+        button_panel_add_label(
+            panel, x, y, font, str_buffer_make_owned_clone(&context->str_buffer, text));
         break;
     }
 
@@ -232,7 +215,7 @@ static void js_button_panel_reset_children(ButtonPanel* panel, JsBtnPanelContext
     context->next_index = 0;
     button_panel_reset(panel);
     button_panel_reserve(panel, context->matrix_x, context->matrix_y);
-    js_button_panel_free_owned(context);
+    str_buffer_clear_all_clones(&context->str_buffer);
 }
 
 static JsBtnPanelContext* ctx_make(struct mjs* mjs, ButtonPanel* panel, mjs_val_t view_obj) {
@@ -242,8 +225,7 @@ static JsBtnPanelContext* ctx_make(struct mjs* mjs, ButtonPanel* panel, mjs_val_
         .matrix_x = 1,
         .matrix_y = 1,
         .next_index = 0,
-        .owned_strings = NULL,
-        .n_owned_strings = 0,
+        .str_buffer = {0},
         .input_queue = furi_message_queue_alloc(1, sizeof(JsBtnPanelEvent)),
     };
     context->contract = (JsEventLoopContract){
@@ -265,7 +247,7 @@ static void ctx_destroy(ButtonPanel* input, JsBtnPanelContext* context, FuriEven
     UNUSED(input);
     furi_event_loop_maybe_unsubscribe(loop, context->input_queue);
     furi_message_queue_free(context->input_queue);
-    js_button_panel_free_owned(context);
+    str_buffer_clear_all_clones(&context->str_buffer);
     free(context);
 }
 

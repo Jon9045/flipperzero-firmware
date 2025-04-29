@@ -2,11 +2,11 @@
 #include "js_gui.h"
 #include "../js_event_loop/js_event_loop.h"
 #include <gui/modules/button_menu.h>
+#include <toolbox/str_buffer.h>
 
 typedef struct {
     int32_t next_index;
-    char** owned_strings;
-    size_t n_owned_strings;
+    StrBuffer str_buffer;
 
     FuriMessageQueue* input_queue;
     JsEventLoopContract contract;
@@ -16,24 +16,6 @@ typedef struct {
     int32_t index;
     InputType input_type;
 } JsBtnMenuEvent;
-
-// not using mlib to conserve code size
-static const char* js_button_menu_own_string(JsBtnMenuContext* context, const char* str) {
-    char* owned = strdup(str);
-    context->n_owned_strings++;
-    context->owned_strings =
-        realloc(context->owned_strings, context->n_owned_strings * sizeof(const char*));
-    context->owned_strings[context->n_owned_strings - 1] = owned;
-    return owned;
-}
-
-static void js_button_menu_free_owned_strings(JsBtnMenuContext* context) {
-    for(size_t i = 0; i < context->n_owned_strings; i++) {
-        free(context->owned_strings[i]);
-    }
-    free(context->owned_strings);
-    context->owned_strings = NULL;
-}
 
 static const char* js_input_type_to_str(InputType type) {
     switch(type) {
@@ -82,7 +64,7 @@ static bool matrix_header_assign(
     JsViewPropValue value,
     JsBtnMenuContext* context) {
     UNUSED(mjs);
-    button_menu_set_header(menu, js_button_menu_own_string(context, value.string));
+    button_menu_set_header(menu, str_buffer_make_owned_clone(&context->str_buffer, value.string));
     return true;
 }
 
@@ -122,7 +104,7 @@ static bool js_button_menu_add_child(
 
     button_menu_add_item(
         menu,
-        js_button_menu_own_string(context, label),
+        str_buffer_make_owned_clone(&context->str_buffer, label),
         context->next_index++,
         input_callback,
         item_type,
@@ -134,7 +116,7 @@ static bool js_button_menu_add_child(
 static void js_button_menu_reset_children(ButtonMenu* menu, JsBtnMenuContext* context) {
     context->next_index = 0;
     button_menu_reset(menu);
-    js_button_menu_free_owned_strings(context);
+    str_buffer_clear_all_clones(&context->str_buffer);
 }
 
 static JsBtnMenuContext* ctx_make(struct mjs* mjs, ButtonMenu* menu, mjs_val_t view_obj) {
@@ -142,8 +124,7 @@ static JsBtnMenuContext* ctx_make(struct mjs* mjs, ButtonMenu* menu, mjs_val_t v
     JsBtnMenuContext* context = malloc(sizeof(JsBtnMenuContext));
     *context = (JsBtnMenuContext){
         .next_index = 0,
-        .owned_strings = NULL,
-        .n_owned_strings = 0,
+        .str_buffer = {0},
         .input_queue = furi_message_queue_alloc(1, sizeof(JsBtnMenuEvent)),
     };
     context->contract = (JsEventLoopContract){
@@ -165,7 +146,7 @@ static void ctx_destroy(ButtonMenu* input, JsBtnMenuContext* context, FuriEventL
     UNUSED(input);
     furi_event_loop_maybe_unsubscribe(loop, context->input_queue);
     furi_message_queue_free(context->input_queue);
-    js_button_menu_free_owned_strings(context);
+    str_buffer_clear_all_clones(&context->str_buffer);
     free(context);
 }
 
