@@ -327,6 +327,8 @@ static void set_manufacturer_data(uint8_t* mfg_data, uint8_t mfg_data_len) {
 }
 
 static void gap_init_svc(Gap* gap, const GapRootSecurityKeys* root_keys) {
+    furi_check(root_keys);
+
     tBleStatus status;
     uint32_t srd_bd_addr[2];
 

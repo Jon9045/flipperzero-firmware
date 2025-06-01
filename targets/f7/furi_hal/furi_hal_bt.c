@@ -170,6 +170,7 @@ FuriHalBleProfileBase* furi_hal_bt_start_app(
     void* context) {
     furi_check(event_cb);
     furi_check(profile_template);
+    furi_check(root_keys);
     furi_check(current_profile == NULL);
 
     do {
@@ -243,8 +244,6 @@ FuriHalBleProfileBase* furi_hal_bt_change_app(
     const GapRootSecurityKeys* root_keys,
     GapEventCallback event_cb,
     void* context) {
-    furi_check(event_cb);
-
     furi_hal_bt_reinit();
     return furi_hal_bt_start_app(profile_template, profile_params, root_keys, event_cb, context);
 }
