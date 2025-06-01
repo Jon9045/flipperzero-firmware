@@ -61,18 +61,15 @@ static bool bt_keys_storage_save(BtKeysStorage* instance) {
 static bool bt_keys_storage_load_keys_and_pairings(
     BtKeysStorage* instance,
     const uint8_t* file_data,
-    size_t file_size) {
-    furi_assert(instance);
-    furi_assert(file_data);
-
-    if(file_size < sizeof(GapRootSecurityKeys)) {
+    size_t data_size) {
+    if(data_size < sizeof(GapRootSecurityKeys)) {
         return false;
     }
 
     const BtKeysStorageFile* loaded = (const BtKeysStorageFile*)file_data;
     memcpy(&instance->root_keys, &loaded->root_keys, sizeof(GapRootSecurityKeys));
 
-    size_t ble_data_size = file_size - sizeof(GapRootSecurityKeys);
+    size_t ble_data_size = data_size - sizeof(GapRootSecurityKeys);
     if(ble_data_size > instance->nvm_sram_buff_size) {
         FURI_LOG_E(TAG, "BLE data too large for SRAM buffer");
         return false;
@@ -281,8 +278,8 @@ bool bt_keys_storage_load(BtKeysStorage* instance) {
         return false;
     }
 
-    uint8_t* file_data = malloc(payload_size);
     bool loaded = false;
+    uint8_t* file_data = malloc(payload_size);
 
     do {
         if(!saved_struct_load(
