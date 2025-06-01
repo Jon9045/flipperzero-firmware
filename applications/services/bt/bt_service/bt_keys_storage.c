@@ -168,11 +168,11 @@ static bool bt_keys_storage_validate_file(
     size_t size;
 
     if(!saved_struct_get_metadata(file_path, &magic, &version, &size)) {
-        FURI_LOG_E(TAG, "Failed to get metadata");
+        FURI_LOG_W(TAG, "Failed to get metadata");
         return false;
 
     } else if(magic != BT_KEYS_STORAGE_MAGIC) {
-        FURI_LOG_E(TAG, "File magic mismatch");
+        FURI_LOG_W(TAG, "File magic mismatch");
         return false;
     } else if(version > BT_KEYS_STORAGE_VERSION) {
         FURI_LOG_E(
@@ -206,7 +206,7 @@ bool bt_keys_storage_is_changed(BtKeysStorage* instance) {
         }
 
         if(!bt_keys_storage_validate_file(file_path, &payload_size, &file_version)) {
-            FURI_LOG_E(TAG, "Invalid or corrupted file");
+            FURI_LOG_W(TAG, "Invalid or corrupted file");
             is_changed = true;
             break;
         }

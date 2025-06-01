@@ -509,7 +509,6 @@ static void bt_init_keys_settings(Bt* bt) {
         FURI_LOG_D(TAG, "SD Card not ready, skipping settings");
 
         // Just start the BLE serial application without loading the keys or settings
-        // FIXME: root keys?
         bt_start_application(bt);
         return;
     }
